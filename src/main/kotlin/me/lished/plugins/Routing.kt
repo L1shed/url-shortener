@@ -14,8 +14,14 @@ import me.lished.route.urlRoute
 fun Application.configureRouting() {
     install(StatusPages) {
         exception<Throwable> { call, cause ->
-            call.respondText(text = "500: $cause", status = HttpStatusCode.InternalServerError)
+            when (cause) {
+                is IllegalArgumentException -> call.respond(HttpStatusCode.BadRequest)
+                is NoSuchElementException -> call.respond(HttpStatusCode.NotFound)
+                else -> call.respondText(text = "500: $cause", status = HttpStatusCode.InternalServerError)
+            }
         }
+
+        statusFile(HttpStatusCode.NotFound, filePattern = "error#.html")
     }
     routing {
 
