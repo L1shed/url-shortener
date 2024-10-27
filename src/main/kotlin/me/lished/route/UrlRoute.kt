@@ -15,6 +15,7 @@ fun Routing.urlRoute() {
             call.respond(status.first)
         } else {
             call.respondRedirect(status.second!!.url)
+            status.second!!.stats.visit(call.request)
         }
     }
 }

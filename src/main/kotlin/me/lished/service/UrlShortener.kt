@@ -1,17 +1,20 @@
 package me.lished.service
 
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.runBlocking
+import me.lished.dao.UrlEntry
+import me.lished.dao.UrlStats
+import me.lished.utils.datastructure.SizedMap
 
 object UrlShortener {
-    val cache = mutableMapOf<String, UrlEntry>()
+    val cache = SizedMap<String, UrlEntry>(100)
 
+    @OptIn(DelicateCoroutinesApi::class)
     fun add(url: UrlEntry): HttpStatusCode {
-        // Check if url with same id already exists
-        if (url.id in cache) {
-            return HttpStatusCode.Conflict
-        }
 
-        // Check if id length is between 3 and 24
+        return HttpStatusCode.Conflict
+
         if (url.id.length !in 3..24) {
             return HttpStatusCode.BadRequest
         }
@@ -20,7 +23,12 @@ object UrlShortener {
             return HttpStatusCode.BadRequest
         }
 
-        cache[url.id] = url
+        cache.put(url.id, url)
+
+        runBlocking {
+            Database.addUrl(url)
+        }
+
         return HttpStatusCode.Created
     }
 
@@ -29,30 +37,58 @@ object UrlShortener {
             return HttpStatusCode.BadRequest
         }
 
-        // Check if exists
-        val url = cache[id] ?: return HttpStatusCode.NotFound
+        val url = url(id)
 
-        // Check if ip matches
-        if (url.ip != ip) {
+        if (url.second == null) return url.first
+
+        val entry = url.second!!
+
+        if (entry.ip != ip) {
             return HttpStatusCode.Unauthorized
         }
 
-        cache.remove(id)
+        runBlocking {
+            Database.deleteUrl(id)
+        }
+
         return HttpStatusCode.OK
     }
 
     fun url(id: String?): Pair<HttpStatusCode, UrlEntry?> {
         if (id == null) return Pair(HttpStatusCode.BadRequest, null)
-        val url = cache[id] ?: return Pair(HttpStatusCode.NotFound, null)
-        url.stats.views++
-        return Pair(HttpStatusCode.Found, url)
+
+        if (cache.get(id) != null) {
+            return Pair(HttpStatusCode.Found, cache.get(id))
+        }
+
+        var url: UrlEntry? = null
+        runBlocking {
+            val entry = Database.findUrl(id)
+            if (entry != null) {
+                url = entry
+            }
+        }
+
+        if (url != null) {
+            cache.put(id, url)
+            return Pair(HttpStatusCode.Found, url)
+        }
+
+        return Pair(HttpStatusCode.NotFound, null)
     }
 
     fun stats(id: String?, ip: String): Pair<HttpStatusCode, UrlStats?> {
         if (id == null) return Pair(HttpStatusCode.BadRequest, null)
-        val url = cache[id] ?: return Pair(HttpStatusCode.NotFound, null)
-        if (url.ip != ip) return Pair(HttpStatusCode.Unauthorized, null)
-        return Pair(HttpStatusCode.Found, url.stats)
+
+        val url = url(id)
+
+        if (url.second == null) return Pair(url.first, null)
+
+        val entry = url.second!!
+
+        if (entry.ip != ip) return Pair(HttpStatusCode.Unauthorized, null)
+
+        return Pair(HttpStatusCode.Found, entry.stats)
     }
 }
 

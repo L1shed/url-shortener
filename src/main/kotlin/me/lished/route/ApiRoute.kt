@@ -7,7 +7,7 @@ import io.ktor.server.routing.Routing
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import me.lished.service.UrlEntry
+import me.lished.dao.UrlEntry
 import me.lished.service.UrlShortener
 
 fun Routing.apiRoute() {

@@ -5,17 +5,17 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.*
 import me.lished.module
-import me.lished.service.urlStore
+import me.lished.dao.UrlEntry
+import me.lished.service.UrlShortener
 import kotlin.test.*
 
 class ApiRoutingTest {
 
     @Test
-    fun manage_urls() = testApplication {
+    fun `manage urls`() = testApplication {
         application {
             module()
         }
-
 
         val id = "123"
 
@@ -48,7 +48,7 @@ class ApiRoutingTest {
     }
 
     @Test
-    fun manage_authorizations() = testApplication {
+    fun `manage authorizations`() = testApplication {
         application {
             module()
         }
@@ -56,8 +56,8 @@ class ApiRoutingTest {
         val id = "123"
 
         // Manually add url with fake ip
-        urlStore[id] = UrlEntry(
-            id, "not-an-ip", "https://google.com"
+        UrlShortener.add(
+            UrlEntry(id, "not-an-ip", "https://google.com")
         )
 
         // Try to delete url
@@ -66,5 +66,12 @@ class ApiRoutingTest {
     }
 
     @Test
-    fun manage_private() {} // todo
+    fun `manage private`() {
+        TODO()
+    }
+
+    @Test
+    fun `bad requests`() {
+        TODO()
+    }
 }
