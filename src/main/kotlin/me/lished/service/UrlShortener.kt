@@ -16,14 +16,14 @@ object UrlShortener {
         }
 
         if (cache.get(url.id) != null
-            || runBlocking { UrlDatabase.findUrl(url.id) } != null) {
+            || runBlocking { UrlDatabase.find(url.id) } != null) {
             return HttpStatusCode.Conflict
         }
 
         cache.put(url.id, url)
 
         runBlocking {
-            UrlDatabase.addUrl(url)
+            UrlDatabase.add(url)
         }
 
         return HttpStatusCode.Created
@@ -47,7 +47,7 @@ object UrlShortener {
         cache.remove(id)
 
         runBlocking {
-            UrlDatabase.deleteUrl(id)
+            UrlDatabase.delete(id)
         }
 
         return HttpStatusCode.OK
@@ -62,7 +62,7 @@ object UrlShortener {
 
         var url: UrlEntry? = null
         runBlocking {
-            val entry = UrlDatabase.findUrl(id)
+            val entry = UrlDatabase.find(id)
             if (entry != null) {
                 url = entry
             }
