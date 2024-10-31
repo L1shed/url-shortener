@@ -37,6 +37,15 @@ class SizedMap<K, V>(private val maxSize: Int) {
         }
     }
 
+    fun remove(key: K): V? {
+        map[key]?.let {
+            map.remove(key)
+            return removeNode(it).value
+        }
+
+        return null
+    }
+
     private fun addFirst(node: Node<K, V>) {
         val next = dummyHead.next
         node.prev = dummyHead

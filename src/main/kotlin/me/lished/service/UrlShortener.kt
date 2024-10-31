@@ -1,7 +1,6 @@
 package me.lished.service
 
 import io.ktor.http.HttpStatusCode
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import me.lished.dao.UrlEntry
 import me.lished.dao.UrlStats
@@ -10,23 +9,21 @@ import me.lished.utils.datastructure.SizedMap
 object UrlShortener {
     val cache = SizedMap<String, UrlEntry>(100)
 
-    @OptIn(DelicateCoroutinesApi::class)
     fun add(url: UrlEntry): HttpStatusCode {
-
-        return HttpStatusCode.Conflict
-
-        if (url.id.length !in 3..24) {
+        if (url.id.length !in 3..24
+            || url.id == "api") {
             return HttpStatusCode.BadRequest
         }
 
-        if (url.id == "api") {
-            return HttpStatusCode.BadRequest
+        if (cache.get(url.id) != null
+            || runBlocking { UrlDatabase.findUrl(url.id) } != null) {
+            return HttpStatusCode.Conflict
         }
 
         cache.put(url.id, url)
 
         runBlocking {
-            Database.addUrl(url)
+            UrlDatabase.addUrl(url)
         }
 
         return HttpStatusCode.Created
@@ -47,8 +44,10 @@ object UrlShortener {
             return HttpStatusCode.Unauthorized
         }
 
+        cache.remove(id)
+
         runBlocking {
-            Database.deleteUrl(id)
+            UrlDatabase.deleteUrl(id)
         }
 
         return HttpStatusCode.OK
@@ -63,7 +62,7 @@ object UrlShortener {
 
         var url: UrlEntry? = null
         runBlocking {
-            val entry = Database.findUrl(id)
+            val entry = UrlDatabase.findUrl(id)
             if (entry != null) {
                 url = entry
             }
